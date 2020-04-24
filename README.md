@@ -157,4 +157,117 @@ override fun createCustomer(customerMono: Mono<Customer>): Mono<*> {
     "scanAvailable": true
 }
 ```
+
+
+#
+## 함수형 웹프로그래밍
+지금까지 애노테이션 기반 구문을 사용해 리액티브 마이크로 서비스를 만들었다면 이번엔 함수형 프로그래밍을 사용해본다. 
+```
+@Component
+class CustomerRouter {
+    @Bean
+    fun customerRoutes(): RouterFunction<*> = router {
+        "/functional".nest {
+            "/customer".nest {
+                GET("/") {
+                    ServerResponse.ok().body("hello world".toMono(), String::class.java)
+                }
+            }
+        }
+    }
+}
+```
+컨트롤러 대신 RouterFunction을 사용한다. 
+
+컴포넌트로 생성했기 때문에 빈이 노출되면 컴포넌트 스캔을 통해 RouterFunction을 만들고 웹 어플리케이션의 경로를 정의할 수 있다. 
+
+/functional 경로에 중첩된 GET 요청으로 /customer 경로를 요청하면 200OK 를 응답하게 된다.  
+
+ServerResponse.ok는 응답을 만드는 메소드인 ServerResponse.Builder이며, 결국 Mono<ServerResponse>를 만든다. 
+
+그 응답에는 Mono<String> 객체가 포함된 또 다른 모노가 들어있다. 
+
+타입추론과 static import를 통해 코드를 간단하게 했다.  
+```
+@Bean
+fun customerRoutes() = router {
+    "/functional".nest {
+        "/customer".nest {
+            GET("/") {
+                ok().body("hello world".toMono(), String::class.java)
+            }
+        }
+    }
+}
+```
+#
+### 핸들러 만들기
+람다를 자세히 보자. 
+```
+@Bean
+fun customerRoutes() = router {
+    "/functional".nest {
+        "/customer".nest {
+            GET("/") { 
+                it: ServerRequest ->
+                ok().body(Customer(1, "functional web").toMono(), String::class.java)
+            }
+        }
+    }
+}
+```
+람다에는 ServerRequest 클래스의 객체인 매개 변수가 하나 있다. `it: ServerRequest`
+
+이 객체에는 매개변수, 요청, 요청 본문 등 모든 세부 정보가 포함된다. 
+
+예제에서는 아무것도 처리할 필요가 없어서 생략됐다. 
+
+클래스를 하나 생성해보자. 
+```
+@Component
+class CustomerHandler {
+    fun get(serverRequest: ServerRequest): Mono<ServerResponse> =
+            ok().body(Customer(1, "kkwonsy").toMono(), Customer::class.java)
+}
+``` 
+get 함수는 람다에서 사용할 수 있다. 
+CustomerRouter를 변경해보자. 
+```
+...
+GET("/") {
+    it: ServerRequest -> customerHandler.get(it)
+}
+...
+```
+람다가 새 핸들러 함수에 매개 변수를 보내기 때문에 method reference를 사용할 수 있다. 
+```
+GET("/", customerHandler::get)
+```
+아재 customerService로 바꿔보자
+```
+@Component
+class CustomerHandler(private val customerService: CustomerService) {
+    fun get(serverRequest: ServerRequest): Mono<ServerResponse> =
+            ok().body(customerService.getCustomer(1))
+}
+```
+(nullable 문제로 컴파일 오류가 날 수 있으니 잘 대응할 것)
+body함수에서 클래스를 지정할 필요가 없어 생략이 가능하다. 
+
+
+이제 기존 REST API 처럼 작성할건데 자세한건 git 코드를 보자.
+
+```
+// 존재하지 않는 고객일 때 ?
+// ok().body() 는 Mono가 필요한데.. 
+// 일단 서비스 호출한 뒤 flatMap을 통해
+// 값이 있든 없든 fromValue를 통해 Mono<Customer>를 생성해준다. 
+fun get(serverRequest: ServerRequest): Mono<ServerResponse> =
+        customerService.getCustomer(serverRequest.pathVariable("id").toInt())
+                .flatMap { ok().body(fromValue(it))}
+                .switchIfEmpty(notFound().build())
+```
+
+
+  
  

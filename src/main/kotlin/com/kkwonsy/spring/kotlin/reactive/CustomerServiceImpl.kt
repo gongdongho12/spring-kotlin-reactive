@@ -20,19 +20,22 @@ class CustomerServiceImpl : CustomerService {
 
     val customers = ConcurrentHashMap(initialCustomers.associateBy(Customer::id))
 
-    override fun getCustomer(id: Int) = customers[id]?.toMono()
+    override fun getCustomer(id: Int) = customers[id]?.toMono() ?: Mono.empty()
 
     override fun searchCustomers(nameFilter: String): Flux<Customer> =
             customers
                     .filter { it.value.name.contains(nameFilter, true) }
                     .map { it.value }.toFlux()
 
-    override fun createCustomer(customerMono: Mono<Customer>): Mono<*> {
+    override fun createCustomer(customerMono: Mono<Customer>): Mono<Customer> {
         return customerMono
-                .map {
-                    customers[it.id] = it
-                    Mono.empty<Any>()
+                .flatMap {
+                    if (customers[it.id] == null) {
+                        customers[it.id] = it
+                        it.toMono()
+                    } else {
+                        Mono.error(CustomerExistException("Customer ${it.id} already exist"))
+                    }
                 }
-                .toMono()
     }
 }
