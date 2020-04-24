@@ -268,6 +268,16 @@ fun get(serverRequest: ServerRequest): Mono<ServerResponse> =
                 .switchIfEmpty(notFound().build())
 ```
 
+#
+#
+지금까지 Non Blocking Reactive Microservice 생성하는 방법을 배웠으나
+Blocking operation을 사용해 데이터를 쿼리하는 경우는 reactive의 이점을 잃는 거다. 
+
+ReactiveCrudRepository가 필요하다!
+
+
+
+
 
   
  
