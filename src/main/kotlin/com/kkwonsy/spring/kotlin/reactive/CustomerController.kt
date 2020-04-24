@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 @RestController
 class CustomerController {
@@ -14,14 +16,15 @@ class CustomerController {
     @Autowired
     private lateinit var customerService: CustomerService
 
+    // 스프링은 Mono<Customer> 라는 publisher가 등록되었기 때문에 이 publisher를 구독하게 된다.
     @GetMapping("/customer/{id}")
-    fun getCustomer(@PathVariable id: Int): ResponseEntity<Customer> {
+    fun getCustomer(@PathVariable id: Int): ResponseEntity<Mono<Customer>> {
         val customer = customerService.getCustomer(id)
         return ResponseEntity(customer, HttpStatus.OK)
     }
     @GetMapping("/customers")
     fun getCustomers(@RequestParam(required = false, defaultValue = "") nameFilter: String)
-            : ResponseEntity<List<Customer>> {
+            : ResponseEntity<Flux<Customer>> {
         val customers = customerService.searchCustomers(nameFilter)
         return ResponseEntity(customers, HttpStatus.OK)
     }

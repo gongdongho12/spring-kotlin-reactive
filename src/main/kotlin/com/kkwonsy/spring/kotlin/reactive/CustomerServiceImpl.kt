@@ -1,6 +1,9 @@
 package com.kkwonsy.spring.kotlin.reactive
 
 import org.springframework.stereotype.Component
+import reactor.core.publisher.Flux
+import reactor.kotlin.core.publisher.toFlux
+import reactor.kotlin.core.publisher.toMono
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
@@ -16,10 +19,10 @@ class CustomerServiceImpl : CustomerService {
 
     val customers = ConcurrentHashMap(initialCustomers.associateBy(Customer::id))
 
-    override fun getCustomer(id: Int): Customer? = customers[id]
+    override fun getCustomer(id: Int) = customers[id]?.toMono()
 
-    override fun searchCustomers(nameFilter: String): List<Customer> =
+    override fun searchCustomers(nameFilter: String): Flux<Customer> =
             customers
                     .filter { it.value.name.contains(nameFilter, true) }
-                    .map { it.value }.toList()
+                    .map { it.value }.toFlux()
 }
