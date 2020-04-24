@@ -97,8 +97,64 @@ val customerFlux = listOf(Customer(1, "One"),Customer(2, "Two")).toFlux()
 ```     
 
 #
-
-
- 
-
+```
+override fun createCustomer(customerMono: Mono<Customer>): Mono<*> {
+    return customerMono
+            .subscribe { customers[it.id] = it }
+            .toMono()
+}
+```
+create를 하면 아래처럼 출력되는데, 이는 subscribe 메소드가 Disposable 객체를 반환하기 때문이다. 
+```
+{
+    "disposed": false,
+    "scanAvailable": true
+}
+```
+map으로 변경하면 
+```
+override fun createCustomer(customerMono: Mono<Customer>): Mono<*> {
+    return customerMono
+            .map { customers[it.id] = it }
+            .toMono()
+}
+``` 
+아래처럼 빈객체를 반환한다. 
+```
+{}
+```
+이는 모노에서 Mapper를 사용해 변환하기 때문이다.
+아래처럼 it을 추가해보자
+그럼 추가한 내용을 결과로 내보낼 수도 있다.  
+```
+override fun createCustomer(customerMono: Mono<Customer>): Mono<*> {
+    return customerMono
+            .map {
+                customers[it.id] = it
+                it
+            }
+            .toMono()
+}
+...
+{
+    "id": 5,
+    "name": "kkwonsy",
+    "telephone": null
+}
+```
+빈 객체를 추가할 수도 있다. 참고로 Any는 코틀린의 최상위 객체이다. 자바의 Object와 유사.  
+```
+override fun createCustomer(customerMono: Mono<Customer>): Mono<*> {
+    return customerMono
+            .map {
+                customers[it.id] = it
+                Mono.empty<Any>()
+            }
+            .toMono()
+}
+...
+{
+    "scanAvailable": true
+}
+```
  
