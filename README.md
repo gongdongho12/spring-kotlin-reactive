@@ -273,10 +273,188 @@ fun get(serverRequest: ServerRequest): Mono<ServerResponse> =
 지금까지 Non Blocking Reactive Microservice 생성하는 방법을 배웠으나
 Blocking operation을 사용해 데이터를 쿼리하는 경우는 reactive의 이점을 잃는 거다. 
 
-ReactiveCrudRepository가 필요하다!
+현재 스프링 데이터의 Reactive 구현은 mongodb, cassandra, redis 중에서 선택 가능하다.
 
+여기서는 mongodb를 활용해본다. 
 
+#
+몽고DB를 설치하자
 
+https://docs.mongodb.com/manual/tutorial/install-mongodb-on-os-x/
+
+```
+$ brew tap mongodb/brew
+$ brew install mongodb-community
+$ brew services start mongodb-community
+$ ps aux | grep -v grep | grep mongod
+$ mongo
+>
+```
+
+#
+어떤 데이터 베이스가 있는지 본다
+```
+> shpw dbs  
+admin   0.000GB
+config  0.000GB
+local   0.000GB
+```    
+기본적으로 admin, local이 있다. 
+admin은 보안 및 관리 정보를, local은 몽고DB 서버의 인스턴스에 필요한 데이터를 저장한다.
+
+#
+사용할 데이터베이스를 만들어보고 다뤄보자 
+```
+> use kotlinspring
+switched to db kotlinspring
+
+> db.createCollection("Customers")
+{ "ok" : 1 }
+
+> db.Customers.insertOne({"name": "spring"})
+{
+	"acknowledged" : true,
+	"insertedId" : ObjectId("5ea527b61886e930c082bd57")
+}
+
+> db.Customers.insertMany([{"name": "reactive"},{"name": "microsevices"}])
+{
+	"acknowledged" : true,
+	"insertedIds" : [
+		ObjectId("5ea527e51886e930c082bd58"),
+		ObjectId("5ea527e51886e930c082bd59")
+	]
+}
+
+> db.Customers.find()
+{ "_id" : ObjectId("5ea527b61886e930c082bd57"), "name" : "spring" }
+{ "_id" : ObjectId("5ea527e51886e930c082bd58"), "name" : "reactive" }
+{ "_id" : ObjectId("5ea527e51886e930c082bd59"), "name" : "microsevices" }
+
+> db.Customers.update({"_id": ObjectId("5ea527e51886e930c082bd59")}, {"name": "kotlin"})
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+
+> db.Customers.find()
+{ "_id" : ObjectId("5ea527b61886e930c082bd57"), "name" : "spring" }
+{ "_id" : ObjectId("5ea527e51886e930c082bd58"), "name" : "reactive" }
+{ "_id" : ObjectId("5ea527e51886e930c082bd59"), "name" : "kotlin" }
+
+> db.Customers.remove({"_id" : ObjectId("5ea527e51886e930c082bd58")})
+WriteResult({ "nRemoved" : 1 })
+
+> db.Customers.find()
+{ "_id" : ObjectId("5ea527b61886e930c082bd57"), "name" : "spring" }
+{ "_id" : ObjectId("5ea527e51886e930c082bd59"), "name" : "kotlin" }
+
+> db.Customers.find({"name": "spring"})
+{ "_id" : ObjectId("5ea527b61886e930c082bd57"), "name" : "spring" }
+```     
+#
+
+gradle에 의존성을 추가하자. 
+```
+implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
+```
+
+#
+application.yml 설정해보자
+```
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017
+      database: kotlinspring
+
+```
+
+#
+
+mongodb에 명령어를 보내보자
+```
+@Component
+class DatabaseInitializer {
+
+    @Autowired
+    lateinit var mongoOperations: ReactiveMongoOperations
+
+    @PostConstruct
+    fun initData() {
+
+        // 컬렉션을 생성하라는 명령을 보내놓고 구독함
+        mongoOperations.collectionExists("Customers").subscribe {
+            if (it != true) {
+                mongoOperations.createCollection("Customers").subscribe {
+                    println("Customers collections created")
+                }
+            } else {
+                println("Customers collections already exist")
+            }
+        }
+    }
+}
+
+...
+Customers collections already exist
+```
+이전에 collection을 만들었기 때문에 존재한다고 출력됐다. 
+
+#
+이번에는 repository를 생성해보자
+```
+@Document(collection = "Customers")
+data class Customer(var id: Int = 0, val name: String = "", val telephone: Telephone? = null) {
+    data class Telephone(var countryCode: String = "", var telephoneNumber: String = "")
+}
+
+interface CustomerRepository : ReactiveCrudRepository<Customer, Int>{
+}
+```
+Crud는 database 종류에 상관없이 CRUD 인터페이스를 구성하고 있다. 
+
+@Document 애너테이션을 통해 컬렉션으로 만들었다. 
+
+#
+사용해보자
+```
+@Component
+class DatabaseInitializer {
+
+    @Autowired
+    lateinit var customerRepository: CustomerRepository
+
+    @PostConstruct
+    fun initData() {
+        mongoOperations.collectionExists("Customers").subscribe {
+            ...
+            if (it != true) {
+            ...
+            } else {
+                ...
+                customerRepository.save(Customer(1, "spring")).subscribe {
+                    println("Default customers created")
+                }
+...
+Customers collections already exist
+Default customers created
+```
+
+실제로 저장되었는지 볼까?
+```
+> show collections Customers
+Customers
+> db.Customers.find()
+{ "_id" : ObjectId("5ea527b61886e930c082bd57"), "name" : "spring" }
+{ "_id" : ObjectId("5ea527e51886e930c082bd59"), "name" : "kotlin" }
+{ "_id" : 1, "name" : "spring", "_class" : "com.kkwonsy.spring.kotlin.reactive.Customer" }
+```
+(_class 라는 특별한 값을 저장하고 있다.)
+
+#
+사실 스프링이 제공하는 repository를 사용하면 collection을 만들 필요가 없기 때문에 삭제하면 된다. 
+
+#
+
+  
 
 
   

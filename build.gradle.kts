@@ -26,6 +26,9 @@ dependencies {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")
     }
     testImplementation("io.projectreactor:reactor-test")
+
+    implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
+
 }
 
 tasks.withType<Test> {
