@@ -502,7 +502,7 @@ spring:
 나머지는 코드 참고..
 
 #
-
+클라우드 설정은 README_springcloud.md 를 참고하자. 
   
 
 
