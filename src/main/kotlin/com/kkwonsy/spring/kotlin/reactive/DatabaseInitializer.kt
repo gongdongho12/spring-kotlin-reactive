@@ -5,24 +5,24 @@ import org.springframework.data.mongodb.core.ReactiveMongoOperations
 import org.springframework.stereotype.Component
 import javax.annotation.PostConstruct
 
-@Component
+//@Component
 class DatabaseInitializer {
 
-    @Autowired
-    lateinit var customerRepository: CustomerRepository
+//    @Autowired
+//    lateinit var customerRepository: CustomerRepository
 
-    companion object {
-        val initialCustomers = listOf(
-                Customer(1, "Kotlin")
-                , Customer(2, "Java")
-                , Customer(3, "Javascript")
-                , Customer(4, "Python"))
-    }
+//    companion object {
+//        val initialCustomers = listOf(
+//                Customer(1, "Kotlin")
+//                , Customer(2, "Java")
+//                , Customer(3, "Javascript")
+//                , Customer(4, "Python"))
+//    }
 
-    @PostConstruct
+//    @PostConstruct
     fun initData() {
-        customerRepository.saveAll(initialCustomers).subscribe {
-            println("Default customers created")
-        }
+//        customerRepository.saveAll(initialCustomers).subscribe {
+//            println("Default customers created")
+//        }
     }
 }

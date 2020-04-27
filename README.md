@@ -453,6 +453,55 @@ Customers
 사실 스프링이 제공하는 repository를 사용하면 collection을 만들 필요가 없기 때문에 삭제하면 된다. 
 
 #
+Mono, Flux를 쓰기 위해 ReactiveMongoTemplate으로 변경하고 DatabaseInitializer도 합친다. 
+```
+@Repository
+class CustomerRepository(private val template: ReactiveMongoTemplate) {
+    fun create(customer: Mono<Customer>): Mono<Customer> = template.save(customer)
+    
+
+    companion object {
+        val initialCustomers = listOf(
+                Customer(1, "Kotlin")
+                , Customer(2, "Java")
+                , Customer(3, "Javascript", Customer.Telephone("+81", "1231092718"))
+                , Customer(4, "Python", Customer.Telephone("+82", "1029301928")))
+    }
+
+    @PostConstruct
+    fun initData() = initialCustomers.map(Customer::toMono).map(this::create).map(Mono<Customer>::subscribe)
+
+    // 헷갈려서 위 initDate를 풀어봤음
+    fun initData2(): List<Disposable> {
+        val toMono: List<Mono<Customer>> = initialCustomers.map { customer -> customer.toMono() }
+        val resultOfCreates: List<Mono<Customer>> = toMono.map { this.create(it) }
+        return resultOfCreates.map { mono: Mono<Customer> -> mono.subscribe() }
+    }
+}
+```
+
+#
+기존의 CustomerService도 수정하자
+```
+@Component
+class CustomerServiceImpl : CustomerService {
+
+    @Autowired
+    lateinit var customerRepository: CustomerRepository
+
+    override fun getCustomer(id: Int) = customerRepository.findById(id)
+```
+
+Telephone은 없는 경우가 있으니 Jackson  null 설정을 추가하자
+```
+spring:
+  jackson:
+    default-property-inclusion: non_null
+```
+
+나머지는 코드 참고..
+
+#
 
   
 

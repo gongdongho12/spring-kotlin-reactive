@@ -9,4 +9,6 @@ interface CustomerService {
 
     fun createCustomer(customerMono: Mono<Customer>): Mono<Customer>
     // mono를 받는다는건 subscriber가 된다는거
+
+    fun deleteCustomer(id: Int): Mono<Boolean>
 }
