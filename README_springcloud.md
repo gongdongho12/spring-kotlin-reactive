@@ -304,4 +304,46 @@ http://localhost:8080/actuator/health 가서 확인이 가능하다.
 
 #
 ## GateWay
+Zuul은 로드 밸런싱, 히스트릭스, 게이트 웨이 기능을 제공한다. 추가해보자. 
+
+```
+implementation("org.springframework.cloud:spring-cloud-starter-config")
+implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+implementation("org.springframework.cloud:spring-cloud-starter-netflix-zuul")
+```
+service1의 포트를 변경해버리자(게이트웨이를 8080으로 쓰기위함)
+```
+server:
+  port: 0
+```
+게이트웨이 이름을 설정하자
+```
+spring:
+  application:
+    name: "gateway"
+```
+key가 없어서 게이트웨이가 안뜨면 키를 추가하자 (bootstrap.yml)
+```
+encrypt:
+  key: "this_is_a_secret"
+```
+http://localhost:8761 에 들어가면 게이트웨이가 있음을 알 수 있다.
+
+이제 라우터를 정의하자
+```
+@SpringBootApplication
+@EnableZuulProxy
+class MygatewayApplication
+...
+```
+http://localhost:8080/service1/greetings 접속해보면 정상동작함을 알 수 있다. 
+#
+
+* URL /service1/greetings를 요청하면 Zuul이 Eureka에서 service1을 찾음
+* Eureka는 available 인스턴스 목록을 반환함
+* Zuul은 Circuit breaker를 만듬
+* Ribbon을 사용해 round robbin 으로 인스턴스를 선택함
+* Zuul이 URL 에서 service1을 지우고 /greetings만 남겨 요청을 보냄
+* 요청 실패하면 hystrix가 차단하므로 추가요청은 즉시 오류를 반환할 것임
+* Zuul은 결과를 반환함
 

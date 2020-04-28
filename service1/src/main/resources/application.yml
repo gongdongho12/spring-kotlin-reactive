@@ -1,4 +1,7 @@
 spring:
+  application:
+    name: "service1"
+
   data:
     mongodb:
       uri: mongodb://localhost:27017
@@ -10,10 +13,11 @@ spring:
     config:
       uri: http://localhost:8888
 
-  application:
-    name: "service1"
 
 eureka:
   client:
     healthcheck:
       enabled: true
+
+server:
+  port: 0
