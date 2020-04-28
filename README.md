@@ -291,10 +291,40 @@ $ mongo
 >
 ```
 
+docker를 이용해 받아보자
+```
+$ docker search mongo
+$ docker pull mongo
+$ docker run --name kkwonsy-mongo -d mongo
+$ docker exec -t -i kkwonsy-mongo bash
+# mongo
+>
+```
+
+docker-compose를 사용해보자. server1/docker-compose.yml 을 돌리면 된다. 
+```
+version: "3.2"
+
+services:
+  mongodb:
+    image: mongo
+    restart: always
+    volumes:
+      - type: bind
+        source: ./data/db
+        target: /data/db
+    container_name: "mongodb"
+    ports:
+      - "27017:27017"
+...
+
+$ docker-compose up -d
+```
+
 #
 어떤 데이터 베이스가 있는지 본다
 ```
-> shpw dbs  
+> show dbs  
 admin   0.000GB
 config  0.000GB
 local   0.000GB
@@ -445,7 +475,7 @@ Customers
 > db.Customers.find()
 { "_id" : ObjectId("5ea527b61886e930c082bd57"), "name" : "spring" }
 { "_id" : ObjectId("5ea527e51886e930c082bd59"), "name" : "kotlin" }
-{ "_id" : 1, "name" : "spring", "_class" : "com.kkwonsy.spring.kotlin.reactive.Customer" }
+{ "_id" : 1, "name" : "spring", "_class" : "Customer" }
 ```
 (_class 라는 특별한 값을 저장하고 있다.)
 
