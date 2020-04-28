@@ -9,3 +9,11 @@ spring:
   cloud:
     config:
       uri: http://localhost:8888
+
+  application:
+    name: "service1"
+
+eureka:
+  client:
+    healthcheck:
+      enabled: true

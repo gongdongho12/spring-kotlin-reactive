@@ -250,6 +250,58 @@ encrypt.key: "this_is_a_secret"
 #
 #
 ## 서비스 탐색
+mydiscovery project
+```
+implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-server")
+```
+```
+server:
+  port: 8761
+spring:
+  application:
+    name: "discovery-server"
+```
+```
+@SpringBootApplication
+@EnableEurekaServer
+class MydiscoveryApplication
+...
+```
 
 
+#
+server1 project
+```
+implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+```
+```
+spring:
+  application:
+    name: "service1"
+```
+
+#
+http://localhost:8761 에 들어가보면 어떤 인스턴스가 등록되어 있는지 볼 수 있다. 
+
+기본적으로 하트비트를 통해 유레카가 알아서 연결을 끊어주고 연결해주지만 가끔 안될때가 있는데, 그땐 Eureka가 제공하는 API를 통해 해결할 수 있다. 
+
+https://github.com/Netflix/eureka/wiki/Eureka-REST-operations
+
+#
+인스턴스 상태 관련해서 스프링 부트 액추에이터가 더 나은 메커니즘을 제공하기 때문에 사용하자
+```
+implementation("org.springframework.boot:spring-boot-starter-actuator")
+```
+```
+eureka:
+  client:
+    healthcheck:
+      enabled: true
+```
+http://localhost:8080/actuator/health 가서 확인이 가능하다. 
+
+`{"status":"UP"}`
+
+#
+## GateWay
 
