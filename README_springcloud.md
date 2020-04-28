@@ -70,11 +70,11 @@ fun main(args: Array<String>) }
 spring:
   profiles:
     active: native
-cloud:
-  config:
-    server:
-      native:
-        search-locations: classpath:config/
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:config/
 ```
 
 http://localhost:8888/application/default 요청하면 다음과 같다
@@ -92,7 +92,7 @@ http://localhost:8888/application/default 요청하면 다음과 같다
 ```
 
 
-이제 설정을 추가해보자
+이제 설정을 추가해보자 (config/application.yml)
 ```
 microservice:
   example:
@@ -134,6 +134,17 @@ class GreetingController {
   fun greetings() = greetings
 }
 ```
+디펜던시도 필요함(책에선 언급이 없네 ㅋ)
+```
+implementation("org.springframework.cloud:spring-cloud-starter-config")
+```
+application.yml 설정도 필요함
+```
+spring:
+  cloud:
+    config:
+      uri: http://localhost:8888
+```
 http://localhost:8080/greetings 를 요청하면 hello가 출력된다. 
 
 #
@@ -144,8 +155,11 @@ microservice:
     greetings: "hello again!!"
 ```
 컨피그 서버를 시작하고, 마이크로서비스도 다시 시작하면 결과가 바뀐다. 
+#
 
-(재시작하지 않고 가능한데 이 부분은 따로 알아봐야 할 듯)
+책에서는 언급이 없지만 설정값이 바뀌면 자동으로 refresh가 되야 의미가 있다. 아래 등의 블로그를 참고하자.
+https://multifrontgarden.tistory.com/237
+
 #
 
 그런데 마이크로서비스는 여러개가 있기 때문에 각 설정을 개별적으로 하는게 좋다. 

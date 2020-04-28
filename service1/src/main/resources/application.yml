@@ -1,0 +1,11 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017
+      database: kotlinspring
+  jackson:
+    default-property-inclusion: non_null
+
+  cloud:
+    config:
+      uri: http://localhost:8888
