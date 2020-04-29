@@ -123,9 +123,124 @@ $ docker service rm helloworld
 // 확인
 $ docker service ls
 ```
+
 #
+마이크로 서비스를 서비스로 퍼블리시 해보자
 
+도커 이미지를 개발 장비에 만들면 스웜의 마스터 노드에서는 사용할 수 없다. 따라서 서비스를 만들 때, 이미지를 배포할 레지스트리 서비스가 필요하다. 
 
+레지스트리를 만들자
+```
+$ docker service create --name registry --publish 5000:5000 registry
+
+$ docker service ls                                                                                       ✔  1013  14:56:23
+ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
+rd35cc81cs0v        registry            replicated          1/1                 registry:latest     *:5000->5000/tcp
+```
+
+http://localhost:5000/v2/_catalog 호출해보면 
+```
+{"repositories":[]}
+```
+
+마이크로 서비스를 만들자. service3 참고.
+
+service3에 도커를 만들자. (Dockerfile)
+```
+FROM openjdk:8-jdk-alpine
+
+ADD build/libs/*.jar service3.jar
+
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "service3.jar"]
+```
+
+```
+// 도커 생성
+$ docker build . -t service3
+
+// 레지스트리 서비스의 이미지에 태그 지정
+$ docker tag service3 localhost:5000/service3
+
+// 공유 레지스트리 서비스로 푸시
+$ docker push localhost:5000/service3
+
+// 8080포트로 서비스하는 마이크로서비스를 스웜에 서비스로 추가
+$ docker service create --name service3-service --publish 8080:8080 localhost:5000/service3 
+```
+
+http://localhost:8888/application/default 요청하면 이전과 동일한 결과를 얻는데 지금은 드커 스웜에서 서비스가 실행중인 것이다. 
+
+#
+```
+$ docker service ls                                                                                       ✔  1019  15:12:20
+ID                  NAME                MODE                REPLICAS            IMAGE                            PORTS
+rd35cc81cs0v        registry            replicated          1/1                 registry:latest                  *:5000->5000/tcp
+4hsd9brnlk6a        service3-service    replicated          1/1                 localhost:5000/service3:latest   *:8080->8080/tcp
+
+// replica를 늘릴 수 있다.
+$ docker service scale service3-service=3
+
+$ docker service ls                                                                                       ✔  1019  15:12:20
+ID                  NAME                MODE                REPLICAS            IMAGE                            PORTS
+rd35cc81cs0v        registry            replicated          1/1                 registry:latest                  *:5000->5000/tcp
+4hsd9brnlk6a        service3-service    replicated          3/3                 localhost:5000/service3:latest   *:8080->8080/tcp
+```
+
+cURL을 사용해 요청을 반복해보자
+```
+$ for i in `seq 1 21`; do curl http://localhost:8080/hello; echo . ; done
+hello I am 31cb9912-55e4-4efa-8a0a-2af7f7a5f2d4 and I have been called 8 times.
+hello I am 601f2a9b-21c1-4dbd-9041-025f6f8607d6 and I have been called 11 times.
+hello I am fd30fba7-5f67-425a-8aff-16e76580ebed and I have been called 9 times.
+hello I am 31cb9912-55e4-4efa-8a0a-2af7f7a5f2d4 and I have been called 9 times.
+hello I am 601f2a9b-21c1-4dbd-9041-025f6f8607d6 and I have been called 12 times.
+hello I am fd30fba7-5f67-425a-8aff-16e76580ebed and I have been called 10 times.
+hello I am 31cb9912-55e4-4efa-8a0a-2af7f7a5f2d4 and I have been called 10 times.
+hello I am 601f2a9b-21c1-4dbd-9041-025f6f8607d6 and I have been called 13 times.
+hello I am fd30fba7-5f67-425a-8aff-16e76580ebed and I have been called 11 times.
+hello I am 31cb9912-55e4-4efa-8a0a-2af7f7a5f2d4 and I have been called 11 times.
+hello I am 601f2a9b-21c1-4dbd-9041-025f6f8607d6 and I have been called 14 times.
+hello I am fd30fba7-5f67-425a-8aff-16e76580ebed and I have been called 12 times.
+hello I am 31cb9912-55e4-4efa-8a0a-2af7f7a5f2d4 and I have been called 12 times.
+hello I am 601f2a9b-21c1-4dbd-9041-025f6f8607d6 and I have been called 15 times.
+hello I am fd30fba7-5f67-425a-8aff-16e76580ebed and I have been called 13 times.
+hello I am 31cb9912-55e4-4efa-8a0a-2af7f7a5f2d4 and I have been called 13 times.
+hello I am 601f2a9b-21c1-4dbd-9041-025f6f8607d6 and I have been called 16 times.
+hello I am fd30fba7-5f67-425a-8aff-16e76580ebed and I have been called 14 times.
+hello I am 31cb9912-55e4-4efa-8a0a-2af7f7a5f2d4 and I have been called 14 times.
+hello I am 601f2a9b-21c1-4dbd-9041-025f6f8607d6 and I have been called 17 times.
+hello I am fd30fba7-5f67-425a-8aff-16e76580ebed and I have been called 15 times.
+```
+
+모든 인스턴스를 중지하려면 아래 명령어
+```
+$ docker service scale service3-service=0
+```
+
+로그 관련
+```
+$ docker service logs service3-service
+
+$ docker service logs -f service3-service
+
+// 특정 인스턴스
+$ docker service logs -f sqmo44alskd
+```
+
+서비스 제어
+```
+$  docker service ps service3-service                                                                      ✔  1029  15:22:01
+ID                  NAME                 IMAGE                            NODE                DESIRED STATE       CURRENT STATE         ERROR               PORTS
+0rbe1l1fucng        service3-service.1   localhost:5000/service3:latest   docker-desktop      Running             Running 2 hours ago                       
+u5ncuxbqr532        service3-service.2   localhost:5000/service3:latest   docker-desktop      Running             Running 2 hours ago                       
+yvkg7noot0co        service3-service.3   localhost:5000/service3:latest   docker-desktop      Running             Running 2 hours ago
+
+// shell 접속
+$ docker exec -it service3-service.2.0rbe1l1fucng /bin/sh
+
+// 서비스 삭제
+$ docker service rm service3-service
+```
 
 
 
